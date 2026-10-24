@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#4A3A8C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Actas">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Voxin Actas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Layout: inicio con reuniones guardadas; reunión = datos arriba, transcripción en el medio, controles de grabación fijos abajo */
+:root{
+  --bg:#EEF3F6; --surface:#FFFFFF; --fg:#13232D; --muted:#5A6B76; --line:#CFDBE2;
+  --accent:#10689A; --accent-fg:#FFFFFF; --accent-soft:#DCEAF2; --rec:#C2412D; --rec-soft:#F8E1DC; --ok:#2E7D4F;
+  --tema:#6A4C9C; --tema-soft:#ECE5F6; --acuerdo:#2E7D4F; --acuerdo-soft:#DFF1E6; --tarea:#B5651D; --tarea-soft:#F7E9D9;
+  --ui:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1820; --surface:#14242E; --fg:#E4EDF2; --muted:#93A6B2; --line:#26404F;
+  --accent:#4FA6D3; --accent-fg:#06141C; --accent-soft:#183A4C; --rec:#EF7A65; --rec-soft:#3A2420; --ok:#6CC596;
+  --tema:#B9A1E6; --tema-soft:#2B2340; --acuerdo:#6CC596; --acuerdo-soft:#1B3427; --tarea:#E7A867; --tarea-soft:#3A2A19; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1820; --surface:#14242E; --fg:#E4EDF2; --muted:#93A6B2; --line:#26404F;
+  --accent:#4FA6D3; --accent-fg:#06141C; --accent-soft:#183A4C; --rec:#EF7A65; --rec-soft:#3A2420; --ok:#6CC596;
+  --tema:#B9A1E6; --tema-soft:#2B2340; --acuerdo:#6CC596; --acuerdo-soft:#1B3427; --tarea:#E7A867; --tarea-soft:#3A2A19; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--ui);
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:16px 40px}
+body.inmeet{padding-bottom:210px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2{text-wrap:balance}
+
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;flex:none}
+.mark svg{width:18px;height:18px}
+.brand h1{margin:0;font-size:1.3rem;letter-spacing:.02em}
+.brand p{margin:0;color:var(--muted);font-size:.88rem}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;font-weight:700;font-size:.92rem;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.danger{color:var(--rec)}
+.btn.sm{padding:5px 10px;font-size:.84rem}
+.btn[disabled]{opacity:.55;cursor:progress}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel h2{margin:0;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.hint{margin:0;color:var(--muted);font-size:.9rem;max-width:70ch}
+.hint b{color:var(--fg)}
+.status{font-size:.86rem;color:var(--muted);margin:0;min-height:1.2em;overflow-wrap:anywhere}
+.status.ok{color:var(--ok)}.status.err{color:var(--rec)}
+
+/* inicio */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 18px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.hero h2{margin:0;font-size:1.15rem}
+.steps{margin:0;padding-left:1.2em;color:var(--muted);font-size:.9rem}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.list li:first-child{border-top:0}
+.list .nm{flex:1;min-width:0}
+.list .nm b{display:block;overflow-wrap:anywhere}
+.list .nm span{color:var(--muted);font-size:.85rem}
+
+/* reunión */
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.grp{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tname{border:1px solid transparent;background:transparent;font-weight:700;font-size:1.15rem;padding:4px 6px;border-radius:6px;min-width:0;flex:1}
+.tname:hover,.tname:focus{border-color:var(--line);background:var(--surface)}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.fields label{display:flex;flex-direction:column;gap:3px;font-size:.8rem;color:var(--muted);font-weight:700}
+.fields input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;font-weight:400;color:var(--fg);font-size:.95rem;min-width:0}
+.people{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pchip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 11px;font-size:.88rem;background:var(--bg)}
+.pchip button{border:0;background:transparent;width:22px;height:22px;border-radius:50%;color:var(--muted);display:grid;place-items:center}
+.addp{display:flex;gap:6px;flex:1;min-width:200px}
+.addp input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 10px}
+
+.feed{display:flex;flex-direction:column;gap:2px}
+.ent{display:grid;grid-template-columns:48px 1fr auto;gap:4px 10px;padding:9px 6px;border-radius:8px;align-items:start}
+.ent:hover{background:var(--bg)}
+.ent .tm{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.8rem;padding-top:3px}
+.ent .body{min-width:0;display:flex;flex-direction:column;gap:3px}
+.ent .meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ent .who{border:0;background:transparent;font-weight:700;font-size:.84rem;padding:0;color:var(--accent);max-width:100%}
+.ent .txt{outline:none;overflow-wrap:anywhere;white-space:pre-wrap;border-radius:4px;padding:1px 2px}
+.ent .txt:focus{background:var(--accent-soft)}
+.badge{border:1px solid var(--line);background:transparent;border-radius:999px;padding:1px 9px;font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.ent.tema{background:var(--tema-soft)}.ent.tema .badge{color:var(--tema);border-color:var(--tema)}
+.ent.acuerdo{background:var(--acuerdo-soft)}.ent.acuerdo .badge{color:var(--acuerdo);border-color:var(--acuerdo)}
+.ent.tarea{background:var(--tarea-soft)}.ent.tarea .badge{color:var(--tarea);border-color:var(--tarea)}
+.ent.tema .txt{font-weight:700}
+.ent .x{border:0;background:transparent;color:var(--muted);width:28px;height:28px;border-radius:6px}
+.ent .x:hover{color:var(--rec);background:var(--rec-soft)}
+.live{color:var(--muted);font-style:italic;padding:6px 8px 6px 64px;min-height:1.5em}
+.emptyfeed{color:var(--muted);font-size:.92rem;padding:8px 4px;margin:0}
+
+.sum{display:flex;flex-direction:column;gap:10px}
+.sum textarea{width:100%;min-height:90px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:9px 10px;resize:vertical}
+.sum h3{margin:4px 0 0;font-size:.95rem}
+.sum ul{margin:0;padding-left:1.2em}
+.sum li{margin:2px 0;overflow-wrap:anywhere}
+
+/* barra de grabación */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.08);
+  padding:10px max(16px, env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px))}
+.dock .in{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.who-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;align-items:center;-webkit-overflow-scrolling:touch}
+.who-row span{font-size:.8rem;color:var(--muted);flex:none}
+.wchip{flex:none;border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 11px;font-size:.86rem;white-space:nowrap}
+.wchip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:700}
+.recrow{display:flex;gap:10px;align-items:center}
+.rec{height:50px;border-radius:25px;border:0;background:var(--rec);color:#FFFFFF;font-weight:700;padding:0 18px 0 14px;display:inline-flex;align-items:center;gap:8px;flex:none}
+.rec .dot{width:14px;height:14px;border-radius:50%;background:#FFFFFF}
+.rec.on .dot{border-radius:3px;animation:pul 1.2s infinite}
+@keyframes pul{50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.rec.on .dot{animation:none}}
+.clock{font-variant-numeric:tabular-nums;font-weight:700;font-size:1.05rem;min-width:62px}
+.mk{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.mk button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:6px 10px;font-size:.84rem;font-weight:700}
+.mk .t{color:var(--tema)}.mk .a{color:var(--acuerdo)}.mk .k{color:var(--tarea)}
+.typer{display:flex;gap:8px}
+.typer input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:1rem}
+@media (max-width:560px){.mk button{padding:5px 8px}.rec{padding:0 14px 0 12px}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></div>
+      <div><h1>Voxin Actas</h1><p>Registrá reuniones hablando.</p></div>
+    </div>
+  </header>
+
+  <!-- INICIO -->
+  <section id="vHome" class="wrap" style="gap:14px">
+    <div class="hero">
+      <h2>Empezá una reunión</h2>
+      <ol class="steps">
+        <li>Cargá el título y los participantes.</li>
+        <li>Tocá <b>Grabar</b>: lo que se dice se escribe solo, con la hora y quién habla.</li>
+        <li>Marcá temas, acuerdos y tareas, y descargá el acta en PDF.</li>
+      </ol>
+      <button class="btn primary" id="newMeet" type="button">Nueva reunión</button>
+    </div>
+    <section class="panel" aria-labelledby="h-list">
+      <h2 id="h-list">Reuniones guardadas</h2>
+      <ul class="list" id="list"></ul>
+    </section>
+  </section>
+
+  <!-- REUNIÓN -->
+  <section id="vMeet" class="wrap" hidden style="gap:12px">
+    <div class="bar">
+      <button class="btn sm" id="back" type="button">← Reuniones</button>
+      <div class="grp">
+        <button class="btn" id="sumBtn" type="button" hidden>Resumir con Claude</button>
+        <button class="btn" id="copy" type="button">Copiar texto</button>
+        <button class="btn primary" id="pdf" type="button">Descargar acta</button>
+      </div>
+    </div>
+    <input class="tname" id="title" aria-label="Título de la reunión" placeholder="Título de la reunión">
+
+    <section class="panel" aria-label="Datos de la reunión">
+      <div class="fields">
+        <label for="fecha">Fecha<input id="fecha" type="date"></label>
+        <label for="lugar">Lugar<input id="lugar" placeholder="Ej.: Sala de profesores"></label>
+      </div>
+      <div class="people" id="people"></div>
+      <form class="addp" id="addp" autocomplete="off"><input id="pname" placeholder="Agregar participante" aria-label="Nombre del participante"><button class="btn sm" type="submit">Agregar</button></form>
+    </section>
+
+    <section class="panel" id="sumPanel" hidden aria-labelledby="h-sum">
+      <div class="bar"><h2 id="h-sum">Resumen</h2><button class="btn sm" id="sumClose" type="button">Quitar resumen</button></div>
+      <div class="sum" id="sum"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-feed">
+      <div class="bar"><h2 id="h-feed">Desarrollo</h2><p class="hint" style="font-size:.82rem">Tocá un texto para corregirlo · tocá la etiqueta para cambiar el tipo</p></div>
+      <div class="feed" id="feed"></div>
+      <div class="live" id="live" aria-live="polite"></div>
+      <p class="status" id="status"></p>
+    </section>
+    <div class="bar"><span></span><button class="btn sm danger" id="delMeet" type="button">Borrar reunión</button></div>
+    <p class="hint" id="delMeetConf" hidden>¿Borrar esta reunión para siempre? <button class="btn sm danger" id="delMeetYes" type="button">Sí, borrar</button> <button class="btn sm" id="delMeetNo" type="button">Cancelar</button></p>
+  </section>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <div class="in">
+    <div class="who-row" id="whoRow"></div>
+    <div class="recrow">
+      <button class="rec" id="rec" type="button"><span class="dot"></span><span id="recLbl">Grabar</span></button>
+      <span class="clock" id="clock">00:00</span>
+      <div class="mk" aria-label="Marcar la última frase como">
+        <button class="t" type="button" data-mk="tema">Tema</button>
+        <button class="a" type="button" data-mk="acuerdo">Acuerdo</button>
+        <button class="k" type="button" data-mk="tarea">Tarea</button>
+      </div>
+    </div>
+    <form class="typer" id="typer" autocomplete="off"><input id="typed" enterkeyhint="send" placeholder="Escribí o dictá con el teclado…" aria-label="Agregar texto"><button class="btn" type="submit">Agregar</button></form>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const uid=()=>Math.random().toString(36).slice(2,10);
+const TYPES=["nota","tema","acuerdo","tarea"];
+const TLABEL={nota:"Nota",tema:"Tema",acuerdo:"Acuerdo",tarea:"Tarea"};
+
+/* ---------- datos ---------- */
+const KEY="voxin-actas";
+let all=[];try{all=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){all=[]}
+let M=null;   // reunión abierta
+let saveT=null;
+function saveNow(){if(M){M.updated=Date.now();const i=all.findIndex(x=>x.id===M.id);if(i<0)all.push(M);else all[i]=M}try{localStorage.setItem(KEY,JSON.stringify(all))}catch(e){}}
+function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,500)}
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
+const dur=ms=>{const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return (h?h+":"+String(m).padStart(2,"0"):String(m).padStart(2,"0"))+":"+String(ss).padStart(2,"0")};
+const fechaLarga=f=>{if(!f)return"";const [y,m,d]=f.split("-");const MES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];return `${+d} de ${MES[+m-1]} de ${y}`};
+
+/* ---------- inicio ---------- */
+function showHome(){
+  stopRec();M=null;$("vHome").hidden=false;$("vMeet").hidden=true;$("dock").hidden=true;document.body.classList.remove("inmeet");
+  const L=[...all].sort((a,b)=>(b.updated||0)-(a.updated||0));
+  $("list").innerHTML=L.length?L.map(m=>`<li data-id="${m.id}"><div class="nm"><b>${esc(m.title||"Reunión sin título")}</b><span>${esc(fechaLarga(m.fecha))} · ${m.entries.length} ${m.entries.length===1?"entrada":"entradas"}${m.ms?" · "+dur(m.ms):""}</span></div><button class="btn sm primary" type="button">Abrir</button></li>`).join("")
+    :`<li><p class="hint">Todavía no registraste ninguna reunión. Quedan guardadas en este dispositivo.</p></li>`;
+}
+$("list").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const m=all.find(x=>x.id===b.closest("li").dataset.id);if(m)openMeet(m)});
+$("newMeet").addEventListener("click",()=>{const m={id:uid(),title:"",fecha:today(),lugar:"",people:[],entries:[],ms:0,summary:null,updated:Date.now()};all.push(m);openMeet(m);$("title").focus()});
+
+/* ---------- reunión ---------- */
+let speaker="";
+function openMeet(m){
+  M=m;speaker="";$("vHome").hidden=true;$("vMeet").hidden=false;$("dock").hidden=false;document.body.classList.add("inmeet");
+  $("title").value=m.title;$("fecha").value=m.fecha||"";$("lugar").value=m.lugar||"";$("delMeetConf").hidden=true;
+  renderPeople();renderFeed();renderSum();$("clock").textContent=dur(m.ms||0);setStatus("");
+  window.scrollTo(0,0);
+}
+$("back").addEventListener("click",()=>{saveNow();showHome()});
+$("title").addEventListener("input",e=>{M.title=e.target.value;saveSoon()});
+$("fecha").addEventListener("input",e=>{M.fecha=e.target.value;saveSoon()});
+$("lugar").addEventListener("input",e=>{M.lugar=e.target.value;saveSoon()});
+$("addp").addEventListener("submit",e=>{e.preventDefault();const n=$("pname").value.trim();if(!n)return;addPerson(n);$("pname").value=""});
+function addPerson(n){n=n.replace(/^./,c=>c.toUpperCase());if(!M.people.some(p=>p.toLowerCase()===n.toLowerCase()))M.people.push(n);renderPeople();saveSoon();return n}
+function renderPeople(){
+  $("people").innerHTML=M.people.length?M.people.map((p,i)=>`<span class="pchip">${esc(p)}<button type="button" data-i="${i}" aria-label="Quitar ${esc(p)}">×</button></span>`).join(""):`<span class="hint" style="font-size:.86rem">Agregá a quienes participan para indicar quién habla.</span>`;
+  $("whoRow").innerHTML=`<span>Habla:</span>`+["",...M.people].map(p=>`<button class="wchip" type="button" data-p="${esc(p)}" aria-pressed="${speaker===p}">${p?esc(p):"Sin indicar"}</button>`).join("");
+}
+$("people").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const p=M.people[+b.dataset.i];M.people.splice(+b.dataset.i,1);if(speaker===p)speaker="";renderPeople();saveSoon()});
+$("whoRow").addEventListener("click",e=>{const b=e.target.closest(".wchip");if(!b)return;speaker=b.dataset.p;renderPeople()});
+
+function renderFeed(){
+  const f=$("feed");
+  if(!M.entries.length){f.innerHTML=`<p class="emptyfeed">Tocá <b>Grabar</b> y empezá a hablar. También podés escribir abajo.</p>`;return}
+  f.innerHTML=M.entries.map(en=>entHTML(en)).join("");
+}
+function entHTML(en){
+  return `<div class="ent ${en.type}" data-id="${en.id}"><span class="tm">${hm(en.t)}</span>
+    <div class="body"><div class="meta"><button class="badge" type="button" data-act="type" title="Cambiar tipo">${TLABEL[en.type]}</button>${en.who?`<span class="who">${esc(en.who)}</span>`:""}</div>
+    <div class="txt" contenteditable="true" spellcheck="true">${esc(en.text)}</div></div>
+    <button class="x" type="button" data-act="del" aria-label="Borrar entrada">×</button></div>`;
+}
+function updEnt(en){const el=document.querySelector(`.ent[data-id="${en.id}"]`);if(el)el.outerHTML=entHTML(en);else{if(M.entries.length===1)$("feed").innerHTML="";$("feed").insertAdjacentHTML("beforeend",entHTML(en))}}
+$("feed").addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]");if(!b)return;const id=b.closest(".ent").dataset.id;const en=M.entries.find(x=>x.id===id);
+  if(b.dataset.act==="type"){en.type=TYPES[(TYPES.indexOf(en.type)+1)%TYPES.length];updEnt(en);saveSoon()}
+  if(b.dataset.act==="del"){M.entries=M.entries.filter(x=>x.id!==id);renderFeed();saveSoon();setStatus("Entrada borrada.","")}
+});
+$("feed").addEventListener("input",e=>{const t=e.target.closest(".txt");if(!t)return;const en=M.entries.find(x=>x.id===t.closest(".ent").dataset.id);en.text=t.innerText.trim();saveSoon()});
+document.querySelectorAll("[data-mk]").forEach(b=>b.addEventListener("click",()=>{
+  const en=M.entries[M.entries.length-1];if(!en){setStatus("Todavía no hay ninguna frase para marcar.","err");return}
+  en.type=en.type===b.dataset.mk?"nota":b.dataset.mk;updEnt(en);saveSoon();setStatus(en.type==="nota"?"Marca quitada.":`Última frase marcada como ${TLABEL[en.type].toLowerCase()}.`,"ok");
+}));
+function setStatus(t,cls){const s=$("status");s.className="status "+(cls||"");s.textContent=t}
+
+/* ---------- texto que llega (voz o teclado) ---------- */
+const PREF=[
+  ["tema",/^\s*(nuevo tema|siguiente tema|tema|punto)\b[\s:,.\-]*/i],
+  ["acuerdo",/^\s*(acuerdo|se acord[oó]( que)?|acordamos( que)?|queda acordado( que)?)\b[\s:,.\-]*/i],
+  ["tarea",/^\s*(tarea|queda pendiente|pendiente)\b[\s:,.\-]*/i]
+];
+function tidy(s){s=s.trim().replace(/\s+/g," ");if(!s)return s;s=s[0].toUpperCase()+s.slice(1);if(!/[.!?…:]$/.test(s))s+=".";return s}
+function addText(raw,fromVoice){
+  let s=raw.trim();if(!s)return;
+  const hab=s.match(/^\s*(habla|tiene la palabra)\s+(.+?)[\s.,]*$/i);
+  if(hab&&hab[2].split(" ").length<=3){
+    const name=hab[2].trim();const found=M.people.find(p=>p.toLowerCase().startsWith(name.toLowerCase().split(" ")[0]));
+    speaker=found||addPerson(name);renderPeople();setStatus(`Ahora habla ${speaker}.`,"ok");return;
+  }
+  let type="nota";
+  for(const [t,re] of PREF){if(re.test(s)){type=t;s=s.replace(re,"");break}}
+  if(!s.trim())return;
+  const now=Date.now();const last=M.entries[M.entries.length-1];
+  if(fromVoice&&type==="nota"&&last&&last.type==="nota"&&last.who===speaker&&now-last.t2<9000&&last.text.length<450){
+    last.text=last.text+" "+tidy(s);last.t2=now;updEnt(last);
+  }else{
+    const en={id:uid(),t:now,t2:now,who:speaker,type,text:tidy(s)};M.entries.push(en);updEnt(en);
+  }
+  saveSoon();
+  const el=$("feed").lastElementChild;if(el&&recording)el.scrollIntoView({block:"nearest"});
+}
+$("typer").addEventListener("submit",e=>{e.preventDefault();const v=$("typed").value;$("typed").value="";addText(v,false)});
+
+/* ---------- grabación continua ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,recording=false,startT=0,tick=null,wake=null,netErr=0;
+$("rec").addEventListener("click",()=>recording?stopRec():startRec());
+function startRec(){
+  if(!SR){setStatus("Este navegador no transcribe voz. Usá Chrome, o escribí y dictá con el micrófono del teclado.","err");$("typed").focus();return}
+  recording=true;startT=Date.now();netErr=0;$("rec").classList.add("on");$("recLbl").textContent="Pausar";setStatus("Grabando. Hablá cerca del teléfono.","ok");
+  tick=setInterval(()=>{$("clock").textContent=dur((M.ms||0)+Date.now()-startT)},500);
+  try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{})}catch(e){}
+  listen();
+}
+function listen(){
+  if(!recording)return;
+  rec=new SR();rec.lang="es-AR";rec.continuous=true;rec.interimResults=true;
+  rec.onresult=e=>{let interim="";for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal){addText(r[0].transcript,true);netErr=0}else interim+=r[0].transcript}$("live").textContent=interim};
+  rec.onerror=e=>{
+    if(e.error==="not-allowed"||e.error==="service-not-allowed"){stopRec();setStatus("El micrófono no está permitido acá. Abrí Voxin Actas instalada en el celular, o dictá con el micrófono del teclado en el cuadro de abajo.","err")}
+    else if(e.error==="network"){netErr++;setStatus("Sin conexión: la transcripción por voz necesita internet. Reintentando…","err")}
+    else if(e.error==="audio-capture"){stopRec();setStatus("No encuentro un micrófono en este dispositivo.","err")}
+  };
+  rec.onend=()=>{$("live").textContent="";if(recording)setTimeout(listen,netErr?Math.min(8000,1000*netErr):150)};
+  try{rec.start()}catch(err){setTimeout(listen,500)}
+}
+function stopRec(){
+  if(!recording)return;recording=false;clearInterval(tick);
+  if(M){M.ms=(M.ms||0)+Date.now()-startT;$("clock").textContent=dur(M.ms);saveSoon()}
+  try{rec&&rec.stop()}catch(e){}
+  try{wake&&wake.release()}catch(e){}wake=null;
+  $("rec").classList.remove("on");$("recLbl").textContent=M&&M.ms?"Seguir":"Grabar";$("live").textContent="";setStatus("Grabación en pausa.","");
+}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&recording&&navigator.wakeLock){navigator.wakeLock.request("screen").then(w=>wake=w).catch(()=>{})}});
+
+/* ---------- resumen con Claude (solo dentro de Claude) ---------- */
+let sampleFn=null;
+if(window.claude&&typeof window.claude.use==="function"){window.claude.use("sample").then(s=>{sampleFn=s;if(s)$("sumBtn").hidden=false}).catch(()=>{})}
+function transcript(){return M.entries.map(e=>`[${hm(e.t)}]${e.who?" "+e.who+":":""}${e.type!=="nota"?" ("+TLABEL[e.type].toUpperCase()+")":""} ${e.text}`).join("\n")}
+$("sumBtn").addEventListener("click",async()=>{
+  if(!sampleFn)return;if(!M.entries.length){setStatus("Primero registrá algo de la reunión.","err");return}
+  const b=$("sumBtn");b.disabled=true;b.textContent="Resumiendo…";setStatus("Claude está leyendo la reunión. Puede tardar hasta un minuto.","");
+  const prompt=`Sos secretario de actas. A partir de la transcripción de una reunión, escribí en español rioplatense formal un resumen para el acta.
+Respondé SOLO con un objeto JSON con esta forma:
+{"resumen":"un párrafo de 3 a 6 oraciones","temas":["..."],"acuerdos":["..."],"tareas":[{"tarea":"...","responsable":"nombre o vacío","plazo":"fecha o vacío"}]}
+No inventes datos que no estén en la transcripción. Las entradas marcadas (TEMA), (ACUERDO) o (TAREA) son las que la persona marcó explícitamente.
+
+Reunión: ${M.title||"(sin título)"}
+Fecha: ${fechaLarga(M.fecha)}
+Lugar: ${M.lugar||"-"}
+Participantes: ${M.people.join(", ")||"-"}
+
+Transcripción:
+${transcript()}`;
+  try{
+    const r=await sampleFn.json(prompt);
+    M.summary={resumen:String(r.resumen||""),temas:(r.temas||[]).map(String),acuerdos:(r.acuerdos||[]).map(String),tareas:(r.tareas||[]).map(t=>typeof t==="string"?{tarea:t,responsable:"",plazo:""}:{tarea:String(t.tarea||""),responsable:String(t.responsable||""),plazo:String(t.plazo||"")})};
+    renderSum();saveSoon();setStatus("Resumen listo. Podés corregir el párrafo antes de descargar el acta.","ok");
+  }catch(e){
+    const msg={not_granted:"No se permitió usar Claude en esta página.",rate_limited:"Claude está ocupado. Probá de nuevo en un rato.",cancelled:"Resumen cancelado."}[e&&e.code]||"No se pudo armar el resumen. Probá de nuevo.";
+    setStatus(msg,"err");if(e&&e.code==="not_granted")b.hidden=true;
+  }finally{b.disabled=false;b.textContent=M.summary?"Volver a resumir":"Resumir con Claude"}
+});
+function renderSum(){
+  const s=M.summary;$("sumPanel").hidden=!s;if(!s){$("sumBtn").textContent="Resumir con Claude";return}
+  $("sumBtn").textContent="Volver a resumir";
+  const ul=a=>a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:`<p class="hint">Ninguno.</p>`;
+  $("sum").innerHTML=`<textarea id="sumTxt" aria-label="Resumen">${esc(s.resumen)}</textarea>
+    <h3>Temas tratados</h3>${ul(s.temas)}<h3>Acuerdos</h3>${ul(s.acuerdos)}
+    <h3>Tareas</h3>${ul(s.tareas.map(t=>t.tarea+(t.responsable?" — "+t.responsable:"")+(t.plazo?" ("+t.plazo+")":"")))}`;
+  $("sumTxt").addEventListener("input",e=>{M.summary.resumen=e.target.value;saveSoon()});
+}
+$("sumClose").addEventListener("click",()=>{M.summary=null;renderSum();saveSoon()});
+
+/* ---------- acta: texto y PDF ---------- */
+function lists(){
+  const s=M.summary;
+  const byType=t=>M.entries.filter(e=>e.type===t).map(e=>e.text+(e.who&&t==="tarea"?" ("+e.who+")":""));
+  return {temas:s&&s.temas.length?s.temas:byType("tema"),acuerdos:s&&s.acuerdos.length?s.acuerdos:byType("acuerdo"),
+    tareas:s&&s.tareas.length?s.tareas.map(t=>t.tarea+(t.responsable?" — "+t.responsable:"")+(t.plazo?" ("+t.plazo+")":"")):byType("tarea")};
+}
+function horario(){if(!M.entries.length)return"";const a=M.entries[0].t,b=M.entries[M.entries.length-1].t2||M.entries[M.entries.length-1].t;return hm(a)+" a "+hm(b)+" h"}
+function plainText(){
+  const L=lists();let out=`ACTA DE REUNIÓN\n${M.title||"Reunión"}\n`;
+  out+=`Fecha: ${fechaLarga(M.fecha)}${horario()?" · "+horario():""}${M.lugar?"\nLugar: "+M.lugar:""}${M.people.length?"\nParticipantes: "+M.people.join(", "):""}\n`;
+  if(M.summary&&M.summary.resumen)out+=`\nRESUMEN\n${M.summary.resumen}\n`;
+  [["TEMAS TRATADOS",L.temas],["ACUERDOS",L.acuerdos],["TAREAS",L.tareas]].forEach(([h,a])=>{if(a.length)out+=`\n${h}\n`+a.map(x=>"• "+x).join("\n")+"\n"});
+  out+=`\nDESARROLLO\n`+M.entries.map(e=>`${hm(e.t)} ${e.who?e.who+": ":""}${e.type!=="nota"?"["+TLABEL[e.type]+"] ":""}${e.text}`).join("\n");
+  return out;
+}
+$("copy").addEventListener("click",async()=>{
+  const t=plainText();
+  try{await navigator.clipboard.writeText(t);setStatus("Acta copiada. Pegala en WhatsApp, un mail o un documento.","ok")}
+  catch(e){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand("copy")}catch(_){}ta.remove();setStatus(ok?"Acta copiada.":"No pude copiar automáticamente en esta vista.",ok?"ok":"err")}
+});
+const latin=s=>String(s).replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/[–—]/g,"-").replace(/…/g,"...").replace(/[^\x20-\x7E\xA0-\xFF\n]/g,"");
+async function buildPdf(){
+  const {PDFDocument,StandardFonts,rgb}=PDFLib;
+  const doc=await PDFDocument.create();const F=await doc.embedFont(StandardFonts.Helvetica),FB=await doc.embedFont(StandardFonts.HelveticaBold);
+  const W=595.28,H=841.89,mL=57,mR=57,mT=57,mB=60,cw=W-mL-mR;
+  const BLUE=rgb(16/255,104/255,154/255),GRAY=rgb(90/255,107/255,118/255),BLACK=rgb(0,0,0);
+  let page=doc.addPage([W,H]),y=H-mT;
+  const ensure=h=>{if(y-h<mB){page=doc.addPage([W,H]);y=H-mT}};
+  const wrap=(txt,font,size,width)=>{const out=[];latin(txt).split("\n").forEach(par=>{let line="";par.split(/\s+/).forEach(w=>{const t=line?line+" "+w:w;if(font.widthOfTextAtSize(t,size)<=width||!line)line=t;else{out.push(line);line=w}});out.push(line)});return out};
+  const para=(txt,size=10.5,bold=false,indent=0,gap=4.5,color=BLACK)=>{const f=bold?FB:F,lh=size*1.32;wrap(txt,f,size,cw-indent).forEach(l=>{ensure(lh);y-=lh;page.drawText(l,{x:mL+indent,y:y+size*0.25,size,font:f,color})});y-=gap};
+  const head=t=>{y-=6;ensure(30);y-=14;page.drawText(latin(t.toUpperCase()),{x:mL,y,size:10,font:FB,color:BLUE});y-=5;page.drawLine({start:{x:mL,y},end:{x:W-mR,y},thickness:0.8,color:BLUE});y-=8};
+  page.drawText("ACTA DE REUNION",{x:mL,y:y-9,size:9,font:FB,color:GRAY});y-=16;
+  para(M.title||"Reunión",17,true,0,6);
+  [["Fecha",fechaLarga(M.fecha)+(horario()?", de "+horario():"")],["Lugar",M.lugar],["Participantes",M.people.join(", ")]].filter(r=>r[1]).forEach(([k,v])=>{
+    const lines=wrap(v,F,10.5,cw-80);lines.forEach((l,i)=>{ensure(14);y-=14;if(!i)page.drawText(k+":",{x:mL,y:y+2.6,size:10.5,font:FB});page.drawText(l,{x:mL+80,y:y+2.6,size:10.5,font:F})})});
+  y-=4;
+  const L=lists();
+  if(M.summary&&M.summary.resumen){head("Resumen");para(M.summary.resumen)}
+  [["Temas tratados",L.temas],["Acuerdos",L.acuerdos],["Tareas",L.tareas]].forEach(([h,a])=>{if(!a.length)return;head(h);
+    a.forEach((x,i)=>{ensure(14);page.drawText(h==="Temas tratados"?(i+1)+".":"-",{x:mL+2,y:y-13.86+2.6,size:10.5,font:F});para(x,10.5,false,18,2.5)})});
+  if(M.entries.length){head("Desarrollo de la reunión");
+    M.entries.forEach(e=>{ensure(14);page.drawText(hm(e.t),{x:mL,y:y-13.2+2.5,size:8.5,font:F,color:GRAY});
+      const pre=(e.who?e.who+": ":"")+(e.type!=="nota"?"["+TLABEL[e.type].toUpperCase()+"] ":"");
+      para(pre+e.text,10,e.type==="tema",38,3.5)})}
+  const pages=doc.getPages(),n=pages.length;
+  pages.forEach((p,i)=>{const t=latin(`${M.title||"Acta"} - página ${i+1} de ${n}`);p.drawText(t,{x:(W-F.widthOfTextAtSize(t,8))/2,y:30,size:8,font:F,color:GRAY})});
+  return new Blob([await doc.save()],{type:"application/pdf"});
+}
+let dlP=null;if(window.claude&&typeof window.claude.use==="function")dlP=window.claude.use("downloads").catch(()=>null);
+$("pdf").addEventListener("click",async()=>{
+  if(!window.PDFLib){setStatus("No se cargó el generador de PDF. Revisá la conexión y recargá.","err");return}
+  if(!M.entries.length&&!M.summary){setStatus("El acta está vacía. Grabá o escribí algo primero.","err");return}
+  const b=$("pdf");b.disabled=true;
+  try{
+    const blob=await buildPdf();const name=`Acta - ${(M.title||"reunion").replace(/[\\/:*?"<>|]/g,"").trim()} - ${M.fecha||today()}.pdf`;
+    const dl=dlP?await dlP:null;
+    if(dl){try{await dl.save({filename:name,data:blob});setStatus("Acta lista: "+name,"ok")}catch(err){setStatus(err&&err.code==="declined"?"Descarga cancelada.":"No se pudo guardar el PDF en esta vista.","err")}}
+    else{const file=new File([blob],name,{type:"application/pdf"});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name});setStatus("Acta compartida.","ok")}catch(e){if(e.name!=="AbortError")saveLink(blob,name)}}
+      else saveLink(blob,name)}
+  }catch(err){setStatus("No se pudo generar el PDF ("+(err.message||err)+").","err")}
+  finally{b.disabled=false}
+});
+function saveLink(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setStatus("Acta descargada: "+name,"ok")}
+
+/* ---------- borrar reunión ---------- */
+$("delMeet").addEventListener("click",()=>{$("delMeetConf").hidden=false});
+$("delMeetNo").addEventListener("click",()=>{$("delMeetConf").hidden=true});
+$("delMeetYes").addEventListener("click",()=>{stopRec();all=all.filter(x=>x.id!==M.id);M=null;try{localStorage.setItem(KEY,JSON.stringify(all))}catch(e){}showHome()});
+
+window.addEventListener("pagehide",()=>{if(recording)stopRec();saveNow()});
+showHome();
+if("serviceWorker" in navigator&&location.protocol.startsWith("http")){navigator.serviceWorker.register("sw.js").catch(()=>{})}
+</script>
+</body>
+</html>
